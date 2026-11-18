@@ -1153,6 +1153,7 @@ if (removeSilenceBtn) {
     toast('No significant silence found in clips', 'info');
   }
 });
+}
 
 // ── Merge & Export ──
 mergeBtn.addEventListener('click', async () => {
