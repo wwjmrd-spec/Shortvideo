@@ -1,0 +1,9 @@
+{
+  "cleanUrls": true,
+  "rewrites": [
+    { "source": "/", "destination": "/static/index.html" },
+    { "source": "/index.html", "destination": "/static/index.html" },
+    { "source": "/styles.css", "destination": "/static/styles.css" },
+    { "source": "/app.js", "destination": "/static/app.js" }
+  ]
+}
