@@ -1,0 +1,458 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="AI-powered YouTube Shorts Generator & Video Editor — Turn any YouTube video into viral shorts or merge and edit clips">
+  <title>ShortsCut AI — Shorts Generator & Video Editor</title>
+  <link rel="stylesheet" href="styles.css?v=20260813">
+</head>
+<body>
+
+  <header class="header">
+    <div class="logo">
+      <div class="logo-icon">✂️</div>
+      <div>
+        <h1>ShortsCut AI</h1>
+        <span>Shorts Generator & Video Editor</span>
+      </div>
+    </div>
+    <div class="header-right">
+      <button class="settings-btn" id="settingsBtn" title="AI Settings">⚙️</button>
+      <div class="ai-badge" id="aiBadge" style="display:none">🤖 AI Active</div>
+      <button class="yt-connect-btn" id="ytConnectBtn" title="Connect YouTube">
+        <svg width="18" height="13" viewBox="0 0 24 17" fill="currentColor"><path d="M23.5 2.5a3 3 0 00-2.1-2.1C19.5 0 12 0 12 0S4.5 0 2.6.4A3 3 0 00.5 2.5 31.3 31.3 0 000 8.5a31.3 31.3 0 00.5 6A3 3 0 002.6 16.6c1.9.4 9.4.4 9.4.4s7.5 0 9.4-.4a3 3 0 002.1-2.1c.3-1.9.5-4 .5-6s-.2-4.1-.5-6z"/><path d="M9.6 12.1V5l6.3 3.5-6.3 3.6z" fill="#fff"/></svg>
+        <span id="ytBtnText">Connect YouTube</span>
+      </button>
+      <div class="badge">🔥 AI-POWERED</div>
+    </div>
+  </header>
+
+  <!-- ══════ TAB BAR ══════ -->
+  <nav class="tab-bar">
+    <button class="tab active" data-tab="shorts">✂️ Shorts Generator</button>
+    <button class="tab" data-tab="editor">🎬 Video Editor</button>
+  </nav>
+
+  <main class="main">
+
+    <!-- ══════════════════════════════════════════════ -->
+    <!-- TAB 1: SHORTS GENERATOR (existing)            -->
+    <!-- ══════════════════════════════════════════════ -->
+    <div class="tab-content active" id="tabShorts">
+
+      <!-- STEP 1: Input URL -->
+      <section class="step" id="step1">
+        <div class="step-header">
+          <div class="step-num">1</div>
+          <h2>Paste YouTube Video URL</h2>
+        </div>
+        <div class="card">
+          <div class="url-row">
+            <input type="text" class="url-input" id="urlInput" placeholder="https://www.youtube.com/watch?v=...">
+            <button class="analyze-btn" id="analyzeBtn">🔍 Analyze Video</button>
+          </div>
+          <div class="settings-row">
+            <div class="setting">
+              <label>Number of Shorts</label>
+              <select id="numClips">
+                <option value="3">3 clips</option>
+                <option value="5" selected>5 clips</option>
+                <option value="8">8 clips</option>
+                <option value="10">10 clips</option>
+              </select>
+            </div>
+            <div class="setting">
+              <label>Clip Duration</label>
+              <select id="clipDuration">
+                <option value="10">10 seconds</option>
+                <option value="12" selected>12 seconds</option>
+                <option value="15">15 seconds</option>
+              </select>
+            </div>
+          </div>
+          <div class="progress-section" id="progressSection">
+            <div class="progress-info">
+              <span class="label" id="progressLabel">Downloading video...</span>
+              <span class="pct" id="progressPct">0%</span>
+            </div>
+            <div class="pbar"><div class="pbar-fill" id="progressFill"></div></div>
+            <div class="status-log" id="statusLog"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- STEP 2: Video Preview -->
+      <section class="step preview-section" id="step2">
+        <div class="step-header">
+          <div class="step-num">2</div>
+          <h2>Preview Video</h2>
+        </div>
+        <div class="card">
+          <div class="video-meta" id="videoMeta">
+            <img id="videoThumb" src="" alt="thumbnail">
+            <div class="info">
+              <h3 id="videoTitle">—</h3>
+              <p id="videoDuration">Duration: —</p>
+            </div>
+          </div>
+          <div class="video-player-wrap">
+            <video id="previewPlayer" controls playsinline>Your browser does not support video.</video>
+          </div>
+          <div class="timeline-bar" id="timelineBar"><div class="timeline-track"></div></div>
+          <p class="timeline-hint">🔴 Red markers show detected highlight moments on the timeline</p>
+        </div>
+      </section>
+
+      <!-- STEP 3: Edit & Generate -->
+      <section class="step segments-section" id="step3">
+        <div class="step-header">
+          <div class="step-num">3</div>
+          <h2>Edit Highlights & Generate Shorts</h2>
+        </div>
+        <div class="card">
+          <div class="segments-list" id="segmentsList"></div>
+          <button class="generate-btn" id="generateBtn">
+            <span class="shimmer"></span>✂️ Generate 9:16 Shorts
+          </button>
+          <div class="progress-section" id="genProgressSection">
+            <div class="progress-info">
+              <span class="label" id="genProgressLabel">Generating clips...</span>
+              <span class="pct" id="genProgressPct">0%</span>
+            </div>
+            <div class="pbar"><div class="pbar-fill" id="genProgressFill"></div></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- STEP 4: Results -->
+      <section class="step results-section" id="step4">
+        <div class="step-header">
+          <div class="step-num">4</div>
+          <h2>Your Shorts Are Ready! 🎉</h2>
+        </div>
+        <div class="results-grid" id="resultsGrid"></div>
+      </section>
+
+    </div>
+
+    <!-- ══════════════════════════════════════════════ -->
+    <!-- TAB 2: VIDEO EDITOR                           -->
+    <!-- ══════════════════════════════════════════════ -->
+    <div class="tab-content" id="tabEditor">
+
+      <!-- STEP 1: Upload Clips -->
+      <section class="step">
+        <div class="step-header">
+          <div class="step-num">1</div>
+          <h2>Upload Video Clips</h2>
+        </div>
+        <div class="card">
+          <div class="dropzone" id="editorDropzone">
+            <div class="dropzone-content">
+              <div class="dropzone-icon">📁</div>
+              <p class="dropzone-title">Drag & drop video files here</p>
+              <p class="dropzone-sub">or</p>
+              <button class="upload-btn" id="editorBrowseBtn">Browse Files</button>
+              <input type="file" id="editorFileInput" multiple accept="video/*" hidden>
+              <p class="dropzone-formats">MP4, MOV, AVI, MKV, WebM</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- STEP 2: Preview & Edit -->
+      <section class="step editor-clips-section" id="editorClipsSection">
+        <div class="step-header">
+          <div class="step-num">2</div>
+          <h2>Preview &amp; Edit</h2>
+          <span class="clip-count" id="editorClipCount">0 clips</span>
+        </div>
+        <div class="card">
+
+          <!-- Preview Player -->
+          <div class="ed-preview-wrap">
+            <div class="ed-play-controls">
+              <button class="ed-play-all-btn" id="edPlayAllBtn" title="Play all clips in sequence">▶ Play All</button>
+              <span class="ed-now-playing" id="edNowPlaying"></span>
+            </div>
+            <video class="ed-preview-player" id="edPreviewPlayer" controls></video>
+            <div class="ed-preview-empty" id="edPreviewEmpty">
+              <span>🎬</span>
+              <p>Upload clips to start editing</p>
+            </div>
+          </div>
+
+          <!-- Timeline Strip -->
+          <div class="ed-timeline-wrap">
+            <div class="ed-toolbar">
+              <button class="editor-action-btn silence-btn" id="removeSilenceBtn" title="AI removes silent parts">🤫 Remove Silence</button>
+              <button class="editor-action-btn" id="addMoreClipsBtn" title="Add more clips">＋ Add Clips</button>
+            </div>
+            <input type="file" id="overlayFileInput" accept="video/*" hidden>
+            <div class="ed-timeline" id="edTimeline"></div>
+            <div class="ed-clips-list-hidden" id="editorClipsList"></div>
+          </div>
+
+          <!-- Selected Clip Editor (shown when a clip is clicked) -->
+          <div class="ed-clip-editor" id="edClipEditor" style="display:none">
+            <div class="ed-editor-header">
+              <h3 id="edEditorTitle">Edit Clip</h3>
+              <button class="ed-editor-close" id="edEditorClose">✕</button>
+            </div>
+            <div class="ed-editor-body" id="edEditorBody"></div>
+          </div>
+
+          <!-- Global Controls -->
+          <div class="editor-global">
+            <h3>🔧 Global Settings</h3>
+            <div class="global-controls">
+              <div class="global-control">
+                <label>🔇 Noise Reduction</label>
+                <label class="toggle">
+                  <input type="checkbox" id="noiseReduction">
+                  <span class="toggle-slider"></span>
+                </label>
+              </div>
+              <div class="global-control" id="noiseStrengthWrap" style="display:none">
+                <label>Strength: <span id="noiseStrengthVal">15 dB</span></label>
+                <input type="range" class="seg-slider" id="noiseStrength" min="5" max="40" value="15" step="1">
+              </div>
+              <div class="global-control">
+                <label>📐 Output Resolution</label>
+                <select id="outputResolution" class="seg-input">
+                  <option value="1920:1080">1920×1080 (Full HD)</option>
+                  <option value="1280:720">1280×720 (HD)</option>
+                  <option value="1080:1920">1080×1920 (Vertical)</option>
+                  <option value="original">Keep Original</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          <!-- Precap / Outro -->
+          <div class="editor-global">
+            <h3>🎬 Text Overlays</h3>
+            <div class="global-controls">
+              <div class="global-control" style="flex:2">
+                <label>📌 Precap (Intro Text)</label>
+                <input type="text" class="seg-input" id="precapText" placeholder="e.g. In this video..." style="width:100%">
+              </div>
+              <div class="global-control">
+                <label>Duration (s)</label>
+                <input type="number" class="seg-input" id="precapDuration" value="3" min="1" max="10" step="0.5">
+              </div>
+            </div>
+            <div class="global-controls" style="margin-top:12px">
+              <div class="global-control" style="flex:2">
+                <label>🔚 Coming Up (Outro Text)</label>
+                <input type="text" class="seg-input" id="outroText" placeholder="e.g. Coming up next..." style="width:100%">
+              </div>
+              <div class="global-control">
+                <label>Duration (s)</label>
+                <input type="number" class="seg-input" id="outroDuration" value="3" min="1" max="10" step="0.5">
+              </div>
+            </div>
+          </div>
+
+          <button class="generate-btn" id="mergeBtn" disabled>
+            <span class="shimmer"></span>🎞️ Merge &amp; Export Video
+          </button>
+
+          <div class="progress-section" id="mergeProgressSection">
+            <div class="progress-info">
+              <span class="label" id="mergeProgressLabel">Processing...</span>
+              <span class="pct" id="mergeProgressPct">0%</span>
+            </div>
+            <div class="pbar"><div class="pbar-fill" id="mergeProgressFill"></div></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- STEP 3: Result -->
+      <section class="step editor-result-section" id="editorResultSection">
+        <div class="step-header">
+          <div class="step-num">3</div>
+          <h2>Your Merged Video is Ready! 🎉</h2>
+        </div>
+        <div class="card">
+          <div class="video-player-wrap">
+            <video id="editorResultVideo" controls playsinline></video>
+          </div>
+          <a class="dl-btn editor-dl-btn" id="editorDownloadBtn" download>⬇️ Download Merged Video</a>
+        </div>
+      </section>
+
+    </div>
+
+  </main>
+
+  <!-- YouTube Auth Modal -->
+  <div class="modal-overlay" id="ytModal">
+    <div class="modal-card">
+      <button class="modal-close" id="ytModalClose">✕</button>
+      <div class="modal-icon">📺</div>
+      <h3>Connect Your YouTube Channel</h3>
+      <p>Enter your YouTube Data API credentials to enable direct upload.</p>
+      <div class="modal-fields">
+        <label>Client ID</label>
+        <input type="text" id="ytClientId" placeholder="Your Google OAuth Client ID">
+        <label>Client Secret</label>
+        <input type="password" id="ytClientSecret" placeholder="Your Google OAuth Client Secret">
+      </div>
+      <button class="modal-submit" id="ytAuthBtn">🔗 Authorize with Google</button>
+      <p class="modal-hint">Need help? Create credentials at <a href="https://console.cloud.google.com/apis/credentials" target="_blank">Google Cloud Console</a></p>
+    </div>
+  </div>
+
+  <!-- AI Settings Modal -->
+  <div class="modal-overlay" id="settingsModal">
+    <div class="modal-card">
+      <button class="modal-close" id="settingsClose">&times;</button>
+      <div class="modal-icon">🤖</div>
+      <h3>AI Settings</h3>
+      <p>Add API keys to enable AI-powered highlights, titles &amp; hashtags</p>
+      <div class="modal-fields">
+        <label>GROQ API KEY <span class="key-status" id="groqStatus"></span></label>
+        <input type="password" id="groqKeyInput" placeholder="gsk_xxxxxxxxxxxxx">
+        <label>GEMINI API KEY <span class="key-status" id="geminiStatus"></span></label>
+        <input type="password" id="geminiKeyInput" placeholder="AIzaSyxxxxxxxxxx">
+      </div>
+      <button class="modal-submit" id="saveKeysBtn" style="background:var(--gradient-accent)">🔑 Save & Validate Keys</button>
+      <p class="modal-hint">Groq: <a href="https://console.groq.com/keys" target="_blank">Get free API key</a> · Gemini: <a href="https://aistudio.google.com/apikey" target="_blank">Get API key</a></p>
+    </div>
+  </div>
+
+  <!-- API Server Config Modal -->
+  <div class="modal-overlay" id="serverConfigOverlay">
+    <div class="modal-content" style="max-width:460px">
+      <h3>🌐 API Server Settings</h3>
+      <p style="font-size:12px;color:var(--text-3);margin:0 0 12px">
+        Your website is hosted separately from the Python backend.<br>
+        Enter the URL where the Flask server is running.
+      </p>
+      <div class="form-group">
+        <label>API Server URL</label>
+        <input type="text" id="apiServerUrl" class="modal-input"
+               placeholder="http://YOUR_IP:5555" style="font-size:14px">
+        <p style="font-size:11px;color:var(--text-3);margin:4px 0 0">
+          Example: <code>http://192.168.1.5:5555</code> (local network) or <code>http://your-vps-ip:5555</code>
+        </p>
+      </div>
+      <div style="display:flex;gap:8px;margin-top:14px">
+        <button class="modal-save" id="saveApiServer" style="flex:1">💾 Save & Connect</button>
+        <button class="modal-save" id="resetApiServer" style="flex:1;background:var(--bg-glass);color:var(--text-1)">🔄 Reset to Default</button>
+      </div>
+      <div id="serverTestResult" style="margin-top:10px;font-size:12px;display:none"></div>
+    </div>
+  </div>
+
+  <div class="toast-box" id="toastBox"></div>
+
+  <script src="app.js?v=20260813"></script>
+
+  <script>
+  // ── API Server Config Logic ──
+  (function() {
+    const overlay = document.getElementById('serverConfigOverlay');
+    const urlInput = document.getElementById('apiServerUrl');
+    const testResult = document.getElementById('serverTestResult');
+
+    // Show server config button only when NOT on localhost
+    const isLocal = ['localhost','127.0.0.1'].includes(window.location.hostname);
+
+    // Add server config button to header
+    const headerRight = document.querySelector('.header-right');
+    const serverBtn = document.createElement('button');
+    serverBtn.className = 'settings-btn';
+    serverBtn.title = 'API Server Settings';
+    serverBtn.textContent = '🌐';
+    serverBtn.id = 'serverConfigBtn';
+    headerRight.insertBefore(serverBtn, headerRight.firstChild);
+
+    // Add connection status badge
+    const statusBadge = document.createElement('div');
+    statusBadge.className = 'badge';
+    statusBadge.id = 'apiStatusBadge';
+    statusBadge.style.cursor = 'pointer';
+    statusBadge.textContent = '⏳ Checking...';
+    statusBadge.title = 'Click to configure API server';
+    statusBadge.addEventListener('click', () => openServerConfig());
+    headerRight.insertBefore(statusBadge, serverBtn.nextSibling);
+
+    // Open modal
+    function openServerConfig() {
+      urlInput.value = localStorage.getItem('shortsCutApiServer') || '';
+      overlay.classList.add('active');
+      testResult.style.display = 'none';
+    }
+
+    serverBtn.addEventListener('click', openServerConfig);
+    overlay.addEventListener('click', (e) => {
+      if (e.target === overlay) overlay.classList.remove('active');
+    });
+
+    // Save
+    document.getElementById('saveApiServer').addEventListener('click', async () => {
+      const url = urlInput.value.trim();
+      if (!url) {
+        testResult.style.display = 'block';
+        testResult.innerHTML = '❌ Enter a server URL';
+        testResult.style.color = 'var(--accent)';
+        return;
+      }
+      testResult.style.display = 'block';
+      testResult.innerHTML = '⏳ Testing connection...';
+      testResult.style.color = 'var(--text-2)';
+
+      try {
+        const testUrl = url.replace(/\/+$/, '') + '/email/video/shorts-generator/api/youtube/status';
+        const res = await fetch(testUrl, { signal: AbortSignal.timeout(8000) });
+        if (res.ok) {
+          localStorage.setItem('shortsCutApiServer', url);
+          testResult.innerHTML = '✅ Connected! Reloading...';
+          testResult.style.color = 'var(--green)';
+          setTimeout(() => window.location.reload(), 1000);
+        } else {
+          testResult.innerHTML = `❌ Server returned ${res.status}. Check the URL.`;
+          testResult.style.color = 'var(--accent)';
+        }
+      } catch (err) {
+        testResult.innerHTML = '❌ Cannot reach server. Make sure it\'s running and the URL is correct.';
+        testResult.style.color = 'var(--accent)';
+      }
+    });
+
+    // Reset
+    document.getElementById('resetApiServer').addEventListener('click', () => {
+      localStorage.removeItem('shortsCutApiServer');
+      testResult.style.display = 'block';
+      testResult.innerHTML = '✅ Reset to default. Reloading...';
+      testResult.style.color = 'var(--green)';
+      setTimeout(() => window.location.reload(), 1000);
+    });
+
+    // Auto-check connection on page load
+    async function checkConnection() {
+      try {
+        const res = await fetch(API + '/youtube/status', { signal: AbortSignal.timeout(5000) });
+        if (res.ok) {
+          statusBadge.textContent = '🟢 Server Connected';
+          statusBadge.style.borderColor = 'var(--green)';
+        } else {
+          throw new Error('not ok');
+        }
+      } catch (e) {
+        statusBadge.textContent = '🔴 Server Offline';
+        statusBadge.style.borderColor = 'var(--accent)';
+        // Auto-open config if not on localhost
+        if (!isLocal && !localStorage.getItem('shortsCutApiServer')) {
+          setTimeout(() => openServerConfig(), 1500);
+        }
+      }
+    }
+    checkConnection();
+  })();
+  </script>
+</body>
+</html>
