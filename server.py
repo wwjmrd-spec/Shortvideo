@@ -41,21 +41,45 @@ def get_clean_env():
     return {k: v for k, v in os.environ.items() if not k.lower().endswith('_proxy')}
 
 
-def get_video_info(url):
-    """Get video metadata using yt-dlp without downloading."""
+def get_base_ytdlp_cmd():
+    """Build base yt-dlp arguments to bypass bot protection and datacenter 429."""
     cmd = [
-        "yt-dlp", "--dump-json", "--no-download",
-        "--no-playlist",
+        "yt-dlp",
         "--socket-timeout", "30",
-        "--retries", "3",
-        "--extractor-retries", "3",
+        "--retries", "5",
+        "--extractor-retries", "5",
         "--no-check-certificates",
         "--geo-bypass",
         "--no-update",
         "--js-runtimes", "node",
         "--remote-components", "ejs:github",
-        "--extractor-args", "youtube:player_client=android,web",
-        "--user-agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36",
+        "--extractor-args", "youtube:player_client=ios,android,mweb",
+        "--user-agent", "Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Mobile/15E148 Safari/604.1",
+    ]
+
+    # Support cookies from file or environment variable (essential for cloud/Render)
+    cookies_file = BASE_DIR / "cookies.txt"
+    if os.environ.get("YOUTUBE_COOKIES") and not cookies_file.exists():
+        try:
+            cookies_file.write_text(os.environ.get("YOUTUBE_COOKIES"))
+        except Exception:
+            pass
+
+    if cookies_file.exists():
+        cmd += ["--cookies", str(cookies_file)]
+
+    # Support custom proxy if set in environment (e.g. residential proxy on Render)
+    if os.environ.get("YOUTUBE_PROXY"):
+        cmd += ["--proxy", os.environ.get("YOUTUBE_PROXY")]
+
+    return cmd
+
+
+def get_video_info(url):
+    """Get video metadata using yt-dlp without downloading."""
+    cmd = get_base_ytdlp_cmd() + [
+        "--dump-json", "--no-download",
+        "--no-playlist",
         url
     ]
     result = subprocess.run(cmd, capture_output=True, text=True, timeout=180, env=get_clean_env())
@@ -67,22 +91,11 @@ def get_video_info(url):
 def download_video(url, job_id):
     """Download video using yt-dlp."""
     output_path = TEMP_DIR / f"{job_id}.%(ext)s"
-    cmd = [
-        "yt-dlp",
+    cmd = get_base_ytdlp_cmd() + [
         "-f", "bestvideo[height<=1080]+bestaudio/bestvideo+bestaudio/best[height<=1080]/best",
         "--merge-output-format", "mp4",
         "-o", str(output_path),
         "--no-playlist",
-        "--socket-timeout", "30",
-        "--retries", "5",
-        "--extractor-retries", "3",
-        "--no-check-certificates",
-        "--geo-bypass",
-        "--no-update",
-        "--js-runtimes", "node",
-        "--remote-components", "ejs:github",
-        "--extractor-args", "youtube:player_client=android,web",
-        "--user-agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36",
         url
     ]
     result = subprocess.run(cmd, capture_output=True, text=True, timeout=600, env=get_clean_env())
@@ -514,20 +527,12 @@ def get_transcript_for_segment(timed_segments, start, duration):
 def extract_transcript(url, job_id):
     """Extract transcript/subtitles from a YouTube video using yt-dlp."""
     sub_path = TEMP_DIR / f"{job_id}_subs"
-    cmd = [
-        "yt-dlp",
+    cmd = get_base_ytdlp_cmd() + [
         "--write-auto-sub", "--sub-lang", "en",
         "--skip-download",
         "--sub-format", "vtt",
         "-o", str(sub_path),
         "--no-playlist",
-        "--socket-timeout", "30",
-        "--no-check-certificates",
-        "--no-update",
-        "--js-runtimes", "node",
-        "--remote-components", "ejs:github",
-        "--extractor-args", "youtube:player_client=android,web",
-        "--user-agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36",
         url
     ]
     subprocess.run(cmd, capture_output=True, text=True, timeout=120, env=get_clean_env())
