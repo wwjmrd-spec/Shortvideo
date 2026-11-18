@@ -22,5 +22,4 @@ RUN mkdir -p temp downloads editor_uploads
 
 EXPOSE 5555
 
-# Run with Gunicorn using threads for concurrent background video rendering
-CMD ["gunicorn", "--bind", "0.0.0.0:5555", "--workers", "1", "--threads", "8", "--timeout", "0", "server:app"]
+CMD ["sh", "-c", "gunicorn --bind 0.0.0.0:${PORT:-5555} --workers 1 --threads 8 --timeout 0 server:app"]

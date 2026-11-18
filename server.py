@@ -27,6 +27,11 @@ DOWNLOADS_DIR = BASE_DIR / "downloads"
 TEMP_DIR.mkdir(exist_ok=True)
 DOWNLOADS_DIR.mkdir(exist_ok=True)
 
+# Add ~/.local/bin to PATH if present (for Render custom ffmpeg)
+home_bin = Path.home() / ".local" / "bin"
+if home_bin.exists() and str(home_bin) not in os.environ.get("PATH", ""):
+    os.environ["PATH"] = f"{home_bin}:{os.environ.get('PATH', '')}"
+
 # Store job state in memory
 jobs = {}
 
@@ -1615,5 +1620,6 @@ def index():
 
 
 if __name__ == "__main__":
-    print("🎬 YouTube Shorts Generator running at http://localhost:5555")
-    app.run(host="0.0.0.0", port=5555, debug=True, use_reloader=False)
+    port = int(os.environ.get("PORT", 5555))
+    print(f"🎬 YouTube Shorts Generator running at http://localhost:{port}")
+    app.run(host="0.0.0.0", port=port, debug=False, use_reloader=False)
