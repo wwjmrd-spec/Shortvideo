@@ -833,32 +833,40 @@ function showClipPreview(clip, idx) {
 }
 
 // Play All — sequential playback through all clips
-document.getElementById('edPlayAllBtn').addEventListener('click', () => {
-  if (editorState.clips.length === 0) { toast('No clips to play', 'error'); return; }
-  playAllMode = true;
-  selectedClipIdx = 0;
-  renderEditorClips();
-  showClipPreview(editorState.clips[0], 0);
+const edPlayAllBtn = document.getElementById('edPlayAllBtn');
+if (edPlayAllBtn) {
+  edPlayAllBtn.addEventListener('click', () => {
+    if (editorState.clips.length === 0) { toast('No clips to play', 'error'); return; }
+    playAllMode = true;
+    selectedClipIdx = 0;
+    renderEditorClips();
+    showClipPreview(editorState.clips[0], 0);
 
-  const player = document.getElementById('edPreviewPlayer');
-  player.play();
-});
+    const player = document.getElementById('edPreviewPlayer');
+    if (player) player.play();
+  });
+}
 
 // Auto-advance to next clip when current finishes
-document.getElementById('edPreviewPlayer').addEventListener('ended', () => {
-  if (!playAllMode) return;
-  const next = selectedClipIdx + 1;
-  if (next < editorState.clips.length) {
-    selectedClipIdx = next;
-    renderEditorClips();
-    showClipPreview(editorState.clips[next], next);
-    document.getElementById('edPreviewPlayer').play();
-  } else {
-    playAllMode = false;
-    document.getElementById('edNowPlaying').textContent = '✅ Finished';
-    document.querySelectorAll('.ed-tl-clip').forEach(el => el.classList.remove('playing'));
-  }
-});
+const edPreviewPlayer = document.getElementById('edPreviewPlayer');
+if (edPreviewPlayer) {
+  edPreviewPlayer.addEventListener('ended', () => {
+    if (!playAllMode) return;
+    const next = selectedClipIdx + 1;
+    if (next < editorState.clips.length) {
+      selectedClipIdx = next;
+      renderEditorClips();
+      showClipPreview(editorState.clips[next], next);
+      const player = document.getElementById('edPreviewPlayer');
+      if (player) player.play();
+    } else {
+      playAllMode = false;
+      const nowPlaying = document.getElementById('edNowPlaying');
+      if (nowPlaying) nowPlaying.textContent = '✅ Finished';
+      document.querySelectorAll('.ed-tl-clip').forEach(el => el.classList.remove('playing'));
+    }
+  });
+}
 
 // ── Clip Editor Panel ──
 let overlayPendingClipIdx = -1;
@@ -1020,16 +1028,22 @@ function hideClipEditor() {
 }
 
 // Close editor button
-document.getElementById('edEditorClose').addEventListener('click', () => {
-  hideClipEditor();
-  selectedClipIdx = -1;
-  renderEditorClips();
-});
+const edEditorClose = document.getElementById('edEditorClose');
+if (edEditorClose) {
+  edEditorClose.addEventListener('click', () => {
+    hideClipEditor();
+    selectedClipIdx = -1;
+    renderEditorClips();
+  });
+}
 
 // Add more clips button
-document.getElementById('addMoreClipsBtn').addEventListener('click', () => {
-  edFileInput.click();
-});
+const addMoreClipsBtn = document.getElementById('addMoreClipsBtn');
+if (addMoreClipsBtn) {
+  addMoreClipsBtn.addEventListener('click', () => {
+    edFileInput.click();
+  });
+}
 
 function createGreenScreenClip() {
   return {
@@ -1042,22 +1056,31 @@ function createGreenScreenClip() {
 }
 
 // ── Noise Reduction Toggle ──
-noiseReduction.addEventListener('change', () => {
-  noiseStrWrap.style.display = noiseReduction.checked ? 'flex' : 'none';
-});
-noiseStrength.addEventListener('input', () => {
-  noiseStrVal.textContent = `${noiseStrength.value} dB`;
-});
+if (typeof noiseReduction !== 'undefined' && noiseReduction) {
+  noiseReduction.addEventListener('change', () => {
+    if (noiseStrWrap) noiseStrWrap.style.display = noiseReduction.checked ? 'flex' : 'none';
+  });
+}
+if (typeof noiseStrength !== 'undefined' && noiseStrength) {
+  noiseStrength.addEventListener('input', () => {
+    if (noiseStrVal) noiseStrVal.textContent = `${noiseStrength.value} dB`;
+  });
+}
 
 // ── Green Screen Button ──
-document.getElementById('addGreenScreenBtn').addEventListener('click', () => {
-  editorState.clips.push(createGreenScreenClip());
-  renderEditorClips();
-  toast('🟩 Green screen clip added — drag to reorder', 'success');
-});
+const addGreenScreenBtn = document.getElementById('addGreenScreenBtn');
+if (addGreenScreenBtn) {
+  addGreenScreenBtn.addEventListener('click', () => {
+    editorState.clips.push(createGreenScreenClip());
+    renderEditorClips();
+    toast('🟩 Green screen clip added — drag to reorder', 'success');
+  });
+}
 
 // ── AI Silence Removal ──
-document.getElementById('removeSilenceBtn').addEventListener('click', async () => {
+const removeSilenceBtn = document.getElementById('removeSilenceBtn');
+if (removeSilenceBtn) {
+  removeSilenceBtn.addEventListener('click', async () => {
   const videoClips = editorState.clips;
   if (videoClips.length === 0) {
     toast('Upload video clips first', 'error');
