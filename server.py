@@ -702,6 +702,16 @@ def save_config():
         except Exception:
             status["gemini"] = False
 
+    # Save YouTube cookies if provided (for Cloud/Render 429 bypass)
+    yt_cookies = data.get("youtube_cookies", "").strip()
+    if yt_cookies:
+        try:
+            cookies_file = BASE_DIR / "cookies.txt"
+            cookies_file.write_text(yt_cookies)
+            status["cookies"] = True
+        except Exception:
+            status["cookies"] = False
+
     return jsonify(status)
 
 

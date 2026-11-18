@@ -1239,12 +1239,15 @@ const groqKeyInput  = document.getElementById('groqKeyInput');
 const geminiKeyInput= document.getElementById('geminiKeyInput');
 const groqStatus    = document.getElementById('groqStatus');
 const geminiStatus  = document.getElementById('geminiStatus');
+const ytCookiesInput = document.getElementById('ytCookiesInput');
+const cookiesStatus  = document.getElementById('cookiesStatus');
 
 // Open/close
 settingsBtn.addEventListener('click', () => {
   settingsModal.classList.add('active');
   groqKeyInput.value = localStorage.getItem('groq_key') || '';
   geminiKeyInput.value = localStorage.getItem('gemini_key') || '';
+  if (ytCookiesInput) ytCookiesInput.value = localStorage.getItem('youtube_cookies') || '';
 });
 
 settingsClose.addEventListener('click', () => {
@@ -1259,11 +1262,13 @@ settingsModal.addEventListener('click', (e) => {
 saveKeysBtn.addEventListener('click', async () => {
   const groqKey = groqKeyInput.value.trim();
   const geminiKey = geminiKeyInput.value.trim();
+  const ytCookies = ytCookiesInput ? ytCookiesInput.value.trim() : '';
 
   saveKeysBtn.disabled = true;
-  saveKeysBtn.textContent = '⏳ Validating...';
+  saveKeysBtn.textContent = '⏳ Saving...';
   groqStatus.textContent = '';
   geminiStatus.textContent = '';
+  if (cookiesStatus) cookiesStatus.textContent = '';
 
   // Save to localStorage immediately
   if (groqKey) localStorage.setItem('groq_key', groqKey);
@@ -1272,12 +1277,19 @@ saveKeysBtn.addEventListener('click', async () => {
   if (geminiKey) localStorage.setItem('gemini_key', geminiKey);
   else localStorage.removeItem('gemini_key');
 
+  if (ytCookies) localStorage.setItem('youtube_cookies', ytCookies);
+  else localStorage.removeItem('youtube_cookies');
+
   // Validate via backend
   try {
     const res = await fetch(`${API}/config`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ groq_key: groqKey, gemini_key: geminiKey })
+      body: JSON.stringify({
+        groq_key: groqKey,
+        gemini_key: geminiKey,
+        youtube_cookies: ytCookies
+      })
     });
     const status = await res.json();
 
@@ -1293,22 +1305,29 @@ saveKeysBtn.addEventListener('click', async () => {
       if (!status.gemini) localStorage.removeItem('gemini_key');
     }
 
+    if (ytCookies && cookiesStatus) {
+      cookiesStatus.textContent = status.cookies ? '✓ Saved' : '✗ Error';
+      cookiesStatus.className = 'key-status ' + (status.cookies ? 'valid' : 'invalid');
+    }
+
     updateAIBadge();
 
     if ((groqKey && status.groq) || (geminiKey && status.gemini)) {
-      toast('🤖 AI keys validated! AI features enabled.', 'success');
+      toast('🤖 Settings saved! AI features enabled.', 'success');
+    } else if (ytCookies) {
+      toast('🍪 YouTube cookies saved to bypass 429!', 'success');
     } else if (!groqKey && !geminiKey) {
-      toast('Keys removed. Using basic mode.', 'info');
+      toast('Settings saved.', 'info');
     } else {
       toast('Key validation failed. Check your keys.', 'error');
     }
 
   } catch (err) {
-    toast('Could not validate keys: ' + err.message, 'error');
+    toast('Could not save settings: ' + err.message, 'error');
   }
 
   saveKeysBtn.disabled = false;
-  saveKeysBtn.textContent = '🔑 Save & Validate Keys';
+  saveKeysBtn.textContent = '🔑 Save Settings';
 });
 
 // Init AI badge on page load

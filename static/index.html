@@ -317,9 +317,11 @@
         <input type="password" id="groqKeyInput" placeholder="gsk_xxxxxxxxxxxxx">
         <label>GEMINI API KEY <span class="key-status" id="geminiStatus"></span></label>
         <input type="password" id="geminiKeyInput" placeholder="AIzaSyxxxxxxxxxx">
+        <label style="margin-top:8px">YOUTUBE COOKIES (Required for Render/Cloud only) <span class="key-status" id="cookiesStatus"></span></label>
+        <textarea id="ytCookiesInput" placeholder="# Netscape HTTP Cookie File&#10;Paste cookies here if hosted on Render to bypass 429..." style="width:100%;height:54px;font-size:11px;font-family:monospace;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);color:#fff;border-radius:8px;padding:8px;resize:vertical;outline:none"></textarea>
       </div>
-      <button class="modal-submit" id="saveKeysBtn" style="background:var(--gradient-accent)">🔑 Save & Validate Keys</button>
-      <p class="modal-hint">Groq: <a href="https://console.groq.com/keys" target="_blank">Get free API key</a> · Gemini: <a href="https://aistudio.google.com/apikey" target="_blank">Get API key</a></p>
+      <button class="modal-submit" id="saveKeysBtn" style="background:var(--gradient-accent)">🔑 Save Settings</button>
+      <p class="modal-hint">Groq: <a href="https://console.groq.com/keys" target="_blank">Free API key</a> · Gemini: <a href="https://aistudio.google.com/apikey" target="_blank">API key</a> · Cookies: Use Chrome extension "Get cookies.txt LOCALLY"</p>
     </div>
   </div>
 
