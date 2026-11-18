@@ -5,6 +5,7 @@ set -o errexit
 # Install Python packages
 pip install --upgrade pip
 pip install -r requirements.txt
+pip install --upgrade yt-dlp
 
 # Install static FFmpeg binary into ~/.local/bin if not present
 if ! command -v ffmpeg &> /dev/null; then

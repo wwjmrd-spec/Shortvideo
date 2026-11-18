@@ -41,8 +41,8 @@ def get_clean_env():
     return {k: v for k, v in os.environ.items() if not k.lower().endswith('_proxy')}
 
 
-def get_base_ytdlp_cmd():
-    """Build base yt-dlp arguments to bypass bot protection and datacenter 429."""
+def get_base_ytdlp_cmd(use_client_fallback=False):
+    """Build base yt-dlp arguments with anti-bot and 429 bypass protections."""
     cmd = [
         "yt-dlp",
         "--socket-timeout", "30",
@@ -51,11 +51,22 @@ def get_base_ytdlp_cmd():
         "--no-check-certificates",
         "--geo-bypass",
         "--no-update",
-        "--js-runtimes", "node",
-        "--remote-components", "ejs:github",
-        "--extractor-args", "youtube:player_client=ios,android,mweb",
-        "--user-agent", "Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Mobile/15E148 Safari/604.1",
     ]
+
+    # Add JS challenge solver if node is available
+    cmd += ["--js-runtimes", "node", "--remote-components", "ejs:github"]
+
+    if use_client_fallback:
+        # Fallback for datacenter IPs (Render/AWS/GCP): skip webpage and use mobile client
+        cmd += [
+            "--extractor-args", "youtube:player_skip=webpage,configs;player_client=android",
+            "--user-agent", "Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/133.0.0.0 Mobile Safari/537.36",
+        ]
+    else:
+        # Standard web client: gets full 1080p, DASH streams, multi-language audio
+        cmd += [
+            "--user-agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/133.0.0.0 Safari/537.36",
+        ]
 
     # Support cookies from file or environment variable (essential for cloud/Render)
     cookies_file = BASE_DIR / "cookies.txt"
@@ -77,30 +88,67 @@ def get_base_ytdlp_cmd():
 
 def get_video_info(url):
     """Get video metadata using yt-dlp without downloading."""
-    cmd = get_base_ytdlp_cmd() + [
-        "--dump-json", "--no-download",
-        "--no-playlist",
-        url
-    ]
-    result = subprocess.run(cmd, capture_output=True, text=True, timeout=180, env=get_clean_env())
+    def _fetch(fallback=False):
+        cmd = get_base_ytdlp_cmd(use_client_fallback=fallback) + [
+            "--dump-json", "--no-download",
+            "--no-playlist",
+            url
+        ]
+        return subprocess.run(cmd, capture_output=True, text=True, timeout=180, env=get_clean_env())
+
+    # Try standard mode first (returns full 1080p stream info)
+    result = _fetch(fallback=False)
     if result.returncode != 0:
-        raise Exception(f"yt-dlp error: {result.stderr[:500]}")
+        err = result.stderr
+        # If rate limited (HTTP 429) or forbidden (HTTP 403) on cloud datacenter, try mobile fallback
+        if "429" in err or "403" in err or "bot" in err.lower():
+            result = _fetch(fallback=True)
+
+    if result.returncode != 0:
+        err = result.stderr
+        if "429" in err or "403" in err or "bot" in err.lower():
+            raise Exception(
+                "YouTube is blocking requests from this server's cloud IP (HTTP 429 Too Many Requests).\n"
+                "Cloud hosts like Render/AWS are blocked by YouTube by default.\n\n"
+                "HOW TO FIX THIS:\n"
+                "1. Click ⚙️ AI Settings in the top bar.\n"
+                "2. Paste YouTube cookies (from the free 'Get cookies.txt LOCALLY' Chrome/Firefox extension) and click Save.\n"
+                "OR run ShortsCut AI directly on your Mac at http://localhost:5555 where your home IP is not blocked!"
+            )
+        raise Exception(f"yt-dlp error: {err[:500]}")
+
     return json.loads(result.stdout)
 
 
 def download_video(url, job_id):
     """Download video using yt-dlp."""
     output_path = TEMP_DIR / f"{job_id}.%(ext)s"
-    cmd = get_base_ytdlp_cmd() + [
-        "-f", "bestvideo[height<=1080]+bestaudio/bestvideo+bestaudio/best[height<=1080]/best",
-        "--merge-output-format", "mp4",
-        "-o", str(output_path),
-        "--no-playlist",
-        url
-    ]
-    result = subprocess.run(cmd, capture_output=True, text=True, timeout=600, env=get_clean_env())
+
+    def _download(fallback=False):
+        fmt = "bestvideo+bestaudio/best" if fallback else "bestvideo[height<=1080]+bestaudio/bestvideo+bestaudio/best[height<=1080]/best"
+        cmd = get_base_ytdlp_cmd(use_client_fallback=fallback) + [
+            "-f", fmt,
+            "--merge-output-format", "mp4",
+            "-o", str(output_path),
+            "--no-playlist",
+            url
+        ]
+        return subprocess.run(cmd, capture_output=True, text=True, timeout=600, env=get_clean_env())
+
+    result = _download(fallback=False)
     if result.returncode != 0:
-        raise Exception(f"Download failed: {result.stderr[:500]}")
+        err = result.stderr
+        if "429" in err or "403" in err or "bot" in err.lower():
+            result = _download(fallback=True)
+
+    if result.returncode != 0:
+        err = result.stderr
+        if "429" in err or "403" in err or "bot" in err.lower():
+            raise Exception(
+                "YouTube blocked download on this cloud server (HTTP 429).\n"
+                "Please add YouTube cookies in ⚙️ Settings or run on http://localhost:5555."
+            )
+        raise Exception(f"Download failed: {err[:500]}")
 
     # Find the downloaded file
     for f in TEMP_DIR.glob(f"{job_id}.*"):
@@ -669,6 +717,7 @@ Return ONLY the JSON array, no other text. Example:
 # API Key Config
 # ──────────────────────────────────────
 
+@app.route("/api/config", methods=["POST"])
 @app.route(f"{URL_PREFIX}/api/config", methods=["POST"])
 def save_config():
     """Save/validate AI API keys."""
@@ -725,6 +774,7 @@ EDITOR_UPLOADS.mkdir(exist_ok=True)
 editor_jobs = {}
 
 
+@app.route("/api/editor/upload", methods=["POST"])
 @app.route(f"{URL_PREFIX}/api/editor/upload", methods=["POST"])
 def editor_upload():
     """Upload video clips for the editor."""
@@ -778,6 +828,7 @@ def editor_upload():
     return jsonify({"clips": clips})
 
 
+@app.route("/api/editor/detect-silence", methods=["POST"])
 @app.route(f"{URL_PREFIX}/api/editor/detect-silence", methods=["POST"])
 def detect_silence():
     """Detect silent (non-speaking) parts in a video clip using ffmpeg silencedetect."""
@@ -854,6 +905,7 @@ def detect_silence():
     })
 
 
+@app.route("/api/editor/merge", methods=["POST"])
 @app.route(f"{URL_PREFIX}/api/editor/merge", methods=["POST"])
 def editor_merge():
     """Merge clips with edits: trim, crop, rotate, volume, noise reduction."""
@@ -1198,6 +1250,7 @@ def editor_merge():
     return jsonify({"job_id": job_id, "status": "processing"})
 
 
+@app.route("/api/editor/status/<job_id>")
 @app.route(f"{URL_PREFIX}/api/editor/status/<job_id>")
 def editor_status(job_id):
     """Check merge job status."""
@@ -1206,6 +1259,7 @@ def editor_status(job_id):
     return jsonify(editor_jobs[job_id])
 
 
+@app.route("/api/editor/preview/<job_id>")
 @app.route(f"{URL_PREFIX}/api/editor/preview/<job_id>")
 def editor_preview(job_id):
     """Stream the merged video."""
@@ -1224,6 +1278,7 @@ def editor_preview(job_id):
 # API Routes
 # ──────────────────────────────────────
 
+@app.route("/api/analyze", methods=["POST"])
 @app.route(f"{URL_PREFIX}/api/analyze", methods=["POST"])
 def analyze_video():
     """Step 1: Start background job to download and analyze video."""
@@ -1352,6 +1407,7 @@ def analyze_video():
     return jsonify({"job_id": job_id, "status": "started"})
 
 
+@app.route("/api/generate", methods=["POST"])
 @app.route(f"{URL_PREFIX}/api/generate", methods=["POST"])
 def generate_shorts():
     """Step 2: Generate clips with crop position, thumbnails, titles & hashtags."""
@@ -1431,6 +1487,7 @@ def generate_shorts():
         return jsonify({"error": str(e)}), 500
 
 
+@app.route("/api/preview/<job_id>")
 @app.route(f"{URL_PREFIX}/api/preview/<job_id>")
 def preview_video(job_id):
     """Stream the downloaded source video for preview."""
@@ -1442,6 +1499,7 @@ def preview_video(job_id):
     return send_file(filepath, mimetype='video/mp4')
 
 
+@app.route("/api/youtube/auth", methods=["POST"])
 @app.route(f"{URL_PREFIX}/api/youtube/auth", methods=["POST"])
 def youtube_auth():
     """Start YouTube OAuth2 flow."""
@@ -1523,6 +1581,7 @@ def youtube_auth():
         return jsonify({"error": str(e)}), 500
 
 
+@app.route("/api/youtube/status")
 @app.route(f"{URL_PREFIX}/api/youtube/status")
 def youtube_status():
     """Check if YouTube is authenticated."""
@@ -1535,6 +1594,7 @@ def youtube_status():
     return jsonify({"authenticated": False})
 
 
+@app.route("/api/youtube/upload", methods=["POST"])
 @app.route(f"{URL_PREFIX}/api/youtube/upload", methods=["POST"])
 def youtube_upload():
     """Upload a generated short to YouTube."""
@@ -1595,6 +1655,7 @@ def youtube_upload():
         return jsonify({"error": str(e)}), 500
 
 
+@app.route("/api/download/<filename>")
 @app.route(f"{URL_PREFIX}/api/download/<filename>")
 def download_file(filename):
     """Download a generated clip."""
@@ -1604,6 +1665,7 @@ def download_file(filename):
     return send_file(str(filepath), as_attachment=True, download_name=filename)
 
 
+@app.route("/api/status/<job_id>")
 @app.route(f"{URL_PREFIX}/api/status/<job_id>")
 def job_status(job_id):
     """Check job status."""
@@ -1612,6 +1674,7 @@ def job_status(job_id):
     return jsonify(jobs[job_id])
 
 
+@app.route("/api/cleanup/<job_id>", methods=["POST"])
 @app.route(f"{URL_PREFIX}/api/cleanup/<job_id>", methods=["POST"])
 def cleanup(job_id):
     """Clean up temp files for a job."""
@@ -1625,13 +1688,23 @@ def cleanup(job_id):
 @app.route("/static/index.html")
 @app.route(f"{URL_PREFIX}")
 @app.route(f"{URL_PREFIX}/")
-def root_redirect():
-    return redirect(f"{URL_PREFIX}/static/index.html")
-
-
 @app.route(f"{URL_PREFIX}/static/index.html")
-def index():
+def root_redirect():
     return send_file(BASE_DIR / "static" / "index.html")
+
+
+@app.route("/static/<path:filename>")
+@app.route(f"{URL_PREFIX}/static/<path:filename>")
+def serve_static(filename):
+    return send_from_directory(BASE_DIR / "static", filename)
+
+
+@app.route("/<path:filename>")
+def serve_root_file(filename):
+    static_file = BASE_DIR / "static" / filename
+    if static_file.exists():
+        return send_file(static_file)
+    return jsonify({"error": "Not found"}), 404
 
 
 if __name__ == "__main__":

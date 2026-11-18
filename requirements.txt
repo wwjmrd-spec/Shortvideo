@@ -5,5 +5,5 @@ google-api-python-client>=2.0
 groq>=0.9
 google-generativeai>=0.7
 Pillow>=10.0
-yt-dlp>=2026.07.0
+yt-dlp>=2026.10.26
 gunicorn>=21.0
