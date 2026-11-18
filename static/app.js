@@ -3,8 +3,12 @@
 // Preview → Edit → Generate → Results + YouTube Upload
 // ============================================================
 
-// API URL: always use same origin (works for localhost, tunnel, or any deployment)
-const API = window.location.origin + '/email/video/shorts-generator/api';
+// API URL: auto-detect local vs hosted custom API server
+const SAVED_API = localStorage.getItem('shortsCutApiServer');
+const IS_LOCAL = ['localhost', '127.0.0.1'].includes(window.location.hostname);
+const API = (!IS_LOCAL && SAVED_API)
+  ? SAVED_API.replace(/\/+$/, '') + (SAVED_API.endsWith('/api') ? '' : '/email/video/shorts-generator/api')
+  : window.location.origin + '/email/video/shorts-generator/api';
 const $ = (s) => document.querySelector(s);
 
 // State

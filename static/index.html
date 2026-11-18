@@ -436,21 +436,26 @@
     });
 
     // Auto-check connection on page load
-    async function checkConnection() {
+    async function checkConnection(retryCount = 0) {
+      statusBadge.textContent = retryCount > 0 ? '⏳ Waking server...' : '⏳ Connecting...';
       try {
-        const res = await fetch(API + '/youtube/status', { signal: AbortSignal.timeout(5000) });
+        const res = await fetch(API + '/youtube/status', { signal: AbortSignal.timeout(12000) });
         if (res.ok) {
-          statusBadge.textContent = '🟢 Server Connected';
+          statusBadge.textContent = '🟢 Server Online';
           statusBadge.style.borderColor = 'var(--green)';
         } else {
-          throw new Error('not ok');
+          throw new Error('Server returned ' + res.status);
         }
       } catch (e) {
+        if (retryCount < 2 && !isLocal) {
+          // Render free instances take ~30-50s to wake up from sleep
+          setTimeout(() => checkConnection(retryCount + 1), 4000);
+          return;
+        }
         statusBadge.textContent = '🔴 Server Offline';
         statusBadge.style.borderColor = 'var(--accent)';
-        // Auto-open config if not on localhost
         if (!isLocal && !localStorage.getItem('shortsCutApiServer')) {
-          setTimeout(() => openServerConfig(), 1500);
+          setTimeout(() => openServerConfig(), 1200);
         }
       }
     }
